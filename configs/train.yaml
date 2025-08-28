@@ -1,0 +1,12 @@
+## Trainer input
+
+model: ResNet18
+criterion: WeightedCrossEntropyLoss
+optimizer: Adam
+learning_rate: 0.001
+num_epochs: 25
+
+## Dataset input
+input_size: 256
+batch_size: 32
+
