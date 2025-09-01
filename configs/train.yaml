@@ -1,12 +1,12 @@
-## Trainer input
+defaults:
+  - model: resnet18
+  - data: chest_xray
+  - training: base
+  - optimizer: adam
+  - criterion: ce
 
-model: ResNet18
-criterion: WeightedCrossEntropyLoss
-optimizer: Adam
-learning_rate: 0.001
-num_epochs: 25
+experiment_name: ${model.name}_${criterion.name}
 
-## Dataset input
-input_size: 256
-batch_size: 32
-
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${experiment_name}

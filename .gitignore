@@ -1,9 +1,9 @@
 chest_xray/
 __pycache__/
 venv/
-pyproject.toml
 env.py
 transpara.egg-info/
 .DS_Store
 .ipynb_checkpoints/
 trained_models/
+outputs/
