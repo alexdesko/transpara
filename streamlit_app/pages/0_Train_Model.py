@@ -3,17 +3,19 @@ from __future__ import annotations
 import sys
 from dataclasses import asdict
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 import torch
 import yaml
-from enum import Enum
-from omegaconf import OmegaConf
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader, WeightedRandomSampler
+
+device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 # Ensure local utils take precedence over any installed package named "streamlit_app"
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,7 +62,7 @@ def _save_config(run_dir: Path, cfg: AppConfig) -> None:
         if isinstance(obj, dict):
             return {k: _coerce(v) for k, v in obj.items()}
         if isinstance(obj, (list, tuple)):
-            return [ _coerce(v) for v in obj ]
+            return [_coerce(v) for v in obj]
         return obj
 
     data = _coerce(asdict(cfg))
@@ -149,32 +151,23 @@ def _prepare_data(cfg: AppConfig):
         weights = [class_weights[i] for i in labels]
         sampler = WeightedRandomSampler(weights=weights, num_samples=len(train_set), replacement=True)
 
-    # persistent_workers requires num_workers > 0
-    persistent = cfg.dataloader.persistent_workers and cfg.dataloader.num_workers > 0
-
     train_loader = DataLoader(
         train_set,
         batch_size=cfg.training.batch_size,
         shuffle=(sampler is None),
         sampler=sampler,
-        num_workers=cfg.dataloader.num_workers,
-        pin_memory=cfg.dataloader.pin_memory,
-        persistent_workers=persistent,
     )
     val_loader = DataLoader(
         val_set,
         batch_size=cfg.training.batch_size,
         shuffle=False,
-        num_workers=cfg.dataloader.num_workers,
-        pin_memory=cfg.dataloader.pin_memory,
-        persistent_workers=persistent,
     )
     return train_loader, val_loader
 
 
 def _prepare_model_and_optim(cfg: AppConfig):
     model = build_model(cfg.model.name, cfg.data.input_size, cfg.model.num_classes)
-    optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr)
+    optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=1e-5)
 
     if cfg.criterion.name == "CrossEntropyLoss":
         criterion = CrossEntropyLoss()
@@ -218,7 +211,6 @@ def _train_loop(cfg: AppConfig) -> Path:
         optimizer=optimizer,
         num_epochs=cfg.training.num_epochs,
         device=device,
-        use_amp=cfg.training.use_amp,
     )
     trainer.configure_monitor(cfg.training.metric_to_monitor, cfg.training.mode)
 
@@ -283,7 +275,7 @@ def main():
             if isinstance(obj, dict):
                 return {k: _coerce(v) for k, v in obj.items()}
             if isinstance(obj, (list, tuple)):
-                return [ _coerce(v) for v in obj ]
+                return [_coerce(v) for v in obj]
             return obj
 
         st.code(yaml.safe_dump(_coerce(asdict(cfg)), sort_keys=False), language="yaml")

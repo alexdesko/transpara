@@ -1,6 +1,5 @@
 batch_size: 32
 num_epochs: 100
-use_weighted_sampler: true
-use_amp: true
+use_weighted_sampler: False
 seed: 42
 metric_to_monitor: val_accuracy

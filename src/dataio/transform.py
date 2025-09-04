@@ -1,9 +1,9 @@
 """Image transforms used across datasets and scripts."""
 
-from torchvision import transforms
+from torchvision.models import ResNet18_Weights
 
 
-def custom_transform(input_size: int = 128) -> transforms.Compose:
+def custom_transform(input_size: int = 128):
     """Standard preprocessing for grayscale images.
 
     Converts PIL image to tensor, resizes to a square, and normalizes to
@@ -15,10 +15,7 @@ def custom_transform(input_size: int = 128) -> transforms.Compose:
     Returns:
         A ``torchvision.transforms.Compose`` callable.
     """
-    return transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Resize((input_size, input_size)),
-            transforms.Normalize(mean=[0.5], std=[0.5]),
-        ]
-    )
+
+    # Use torchvision's pretrained ResNet18 transforms. This returns a
+    # callable transform pipeline; ensure we instantiate it.
+    return ResNet18_Weights.DEFAULT.transforms()

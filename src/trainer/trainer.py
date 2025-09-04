@@ -8,6 +8,7 @@ and saving/loading of model weights and per-epoch metrics.
 from pathlib import Path
 
 import pandas as pd
+import streamlit as st
 import torch
 from rich.progress import Progress
 
@@ -61,18 +62,18 @@ class Trainer:
         Accumulates accuracy and loss over the entire dataset using the
         configured device and AMP settings.
         """
-
         running_loss = 0.0
         running_correct = 0
         total = 0
+
         self.model.train()
 
         with Progress() as progress:
             task = progress.add_task("[red]Training...", total=len(train_loader))
-
+            st.info("hello there")
             for inputs, labels in train_loader:
-                inputs = inputs.to(self.device, non_blocking=True)
-                labels = labels.to(self.device, non_blocking=True)
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
 
                 outputs = self.model(inputs)
                 loss = self.criterion(outputs, labels)

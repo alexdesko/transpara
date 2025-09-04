@@ -67,7 +67,7 @@ def load_config(run_dir: Path) -> DictConfig:
 def build_model(model_name: str, input_size: int, num_classes: int):
     """Construct a model by name consistent with training code."""
     if model_name == "ResNet18":
-        model = CustomResNet18(num_classes=num_classes, in_channels=1, weights=None)
+        model = CustomResNet18()
     elif model_name == "CNN":
         model = SimpleCNN(input_size=input_size, num_classes=num_classes)
     elif model_name == "MLP":
@@ -95,7 +95,8 @@ def load_model_from_run(run_dir: Path):
 
 def preprocess_image(img: Image.Image, input_size: int) -> torch.Tensor:
     """To tensor, resize, normalize; returns (1,C,H,W) on device."""
-    x = custom_transform(input_size)(img.convert("L")).unsqueeze(0).to(get_device())
+    # Use RGB to be compatible with ResNet18 default transforms (3-channel)
+    x = custom_transform(input_size)(img.convert("RGB")).unsqueeze(0).to(get_device())
     return x
 
 

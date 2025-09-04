@@ -1,8 +1,7 @@
 # TRANSPARA
 
 ## TODO
-- Oversee configuration with Hydra
-- Streamlit app
+- On the resnet keep 3 channels and rewrite the FC
 - Remove the train script
 - Check dependencies
 - Implement gradCAM for the other models

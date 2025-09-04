@@ -1,6 +1,5 @@
-import torch
 import torch.nn as nn
-from torchvision.models import resnet18 as tv_resnet18
+from torchvision.models import ResNet18_Weights, resnet18
 
 
 class CustomResNet18(nn.Module):
@@ -23,40 +22,17 @@ class CustomResNet18(nn.Module):
         A module whose forward returns logits of shape ``(N, num_classes)``.
     """
 
-    def __init__(self, num_classes: int = 2, in_channels: int = 1, weights=None):
-        super().__init__()
+    def __init__(self, num_classes=2):
+        super(CustomResNet18, self).__init__()
         # Build base model
-        self.model = tv_resnet18(weights=weights)
+        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
 
-        # Adapt first conv for grayscale or other channel counts
-        old_conv = self.model.conv1
-        self.model.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=old_conv.out_channels,
-            kernel_size=old_conv.kernel_size,
-            stride=old_conv.stride,
-            padding=old_conv.padding,
-            bias=old_conv.bias is not None,
-        )
-
-        # If using pretrained weights and going from 3->1 channels, average weights
-        if (
-            hasattr(old_conv, "weight")
-            and old_conv.weight.shape[1] == 3
-            and in_channels == 1
-            and weights is not None
-        ):
-            with torch.no_grad():
-                w = old_conv.weight.detach().clone()
-                # Average across RGB input channel dimension
-                w = w.mean(dim=1, keepdim=True)
-                self.model.conv1.weight.copy_(w)
-
+        for p in self.model.parameters():
+            p.requires_grad = False
         # Replace the final FC for desired number of classes
         in_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(
-            in_features=in_features, out_features=num_classes, bias=True
-        )
+        self.model.fc = nn.Linear(in_features=in_features, out_features=num_classes, bias=True)
+        self.model.fc.requires_grad = True
 
     def forward(self, x):
         return self.model(x)
