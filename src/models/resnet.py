@@ -22,7 +22,7 @@ class CustomResNet18(nn.Module):
         A module whose forward returns logits of shape ``(N, num_classes)``.
     """
 
-    def __init__(self, num_classes=2):
+    def __init__(self, num_classes=3):
         super(CustomResNet18, self).__init__()
         # Build base model
         self.model = resnet18(weights=ResNet18_Weights.DEFAULT)

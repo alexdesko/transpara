@@ -6,8 +6,6 @@ from typing import Literal
 
 
 class ModelName(str, Enum):
-    CNN = "CNN"
-    MLP = "MLP"
     ResNet18 = "ResNet18"
 
 
@@ -22,15 +20,13 @@ class CriterionName(str, Enum):
 
 @dataclass
 class ModelConfig:
-    name: ModelName = ModelName.CNN
+    name: ModelName = ModelName.ResNet18
     num_classes: int = 2
-    # For MLP only
-    hidden_size: int = 512
 
 
 @dataclass
 class DataConfig:
-    root: str = "chest_xray"
+    root: str = "dataset"
     input_size: int = 256
 
 
@@ -72,4 +68,3 @@ class AppConfig:
     criterion: CriterionConfig = field(default_factory=CriterionConfig)
     dataloader: DataloaderConfig = field(default_factory=DataloaderConfig)
     experiment_name: str = "${model.name}_${criterion.name}"
-

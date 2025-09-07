@@ -1,9 +1,25 @@
-defaults:
-  - model: resnet18
-  - data: chest_xray
-  - training: base
-  - optimizer: adam
-  - criterion: ce
+model:
+  name: ResNet18
+  num_classes: 3
+
+data:
+  root: dataset
+  split_seed: 42
+
+training:
+  batch_size: 32
+  num_epochs: 50
+  seed: 42
+  metric_to_monitor: val_accuracy
+  mode: max
+
+optimizer:
+  name: Adam
+  lr: 0.001
+  wd: 1e-5
+
+criterion:
+  name: CrossEntropyLoss
 
 experiment_name: ${model.name}_${criterion.name}
 

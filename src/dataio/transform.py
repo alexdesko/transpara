@@ -3,7 +3,7 @@
 from torchvision.models import ResNet18_Weights
 
 
-def custom_transform(input_size: int = 128):
+def custom_transform():
     """Standard preprocessing for grayscale images.
 
     Converts PIL image to tensor, resizes to a square, and normalizes to
@@ -15,7 +15,4 @@ def custom_transform(input_size: int = 128):
     Returns:
         A ``torchvision.transforms.Compose`` callable.
     """
-
-    # Use torchvision's pretrained ResNet18 transforms. This returns a
-    # callable transform pipeline; ensure we instantiate it.
     return ResNet18_Weights.DEFAULT.transforms()

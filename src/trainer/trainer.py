@@ -8,10 +8,10 @@ and saving/loading of model weights and per-epoch metrics.
 from pathlib import Path
 
 import pandas as pd
-import streamlit as st
 import torch
 from rich.progress import Progress
 
+from typing import Optional
 
 class Trainer:
     """Simple supervised training loop with optional AMP.
@@ -37,7 +37,8 @@ class Trainer:
         criterion,
         optimizer,
         num_epochs: int = 100,
-        device: torch.device | None = None,
+        device: Optional[torch.device] = None
+        #device: torch.device | None = None,
     ):
         self.model = model
         self.criterion = criterion
@@ -70,7 +71,6 @@ class Trainer:
 
         with Progress() as progress:
             task = progress.add_task("[red]Training...", total=len(train_loader))
-            st.info("hello there")
             for inputs, labels in train_loader:
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
