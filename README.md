@@ -11,68 +11,73 @@
 - Push
 - Push to Github once everything is completed
 
-Explainable AI training project for chest X‑ray pneumonia classification. Uses a ResNet18 model, a training loop with progress, class imbalance handling, a single-file Hydra config, and a Streamlit app for training, inference, explainability, and run browsing.
+Explainable AI project for chest X‑ray pneumonia classification with a ResNet18 backbone, a lightweight Trainer, Hydra configuration for CLI runs, and a Streamlit app for training, inference, and Grad‑CAM explainability.
 
 ## Overview
-- Model: `ResNet18`
-- Trainer: supervised training with accuracy/loss tracking and CSV export
-- Imbalance: weighted sampler and weighted cross‑entropy (configurable)
-- Hardware: auto‑selects `mps` (Apple), `cuda`, or `cpu`
-- Notebooks: exploratory analysis and training report
-- Streamlit: train models, upload & predict, Grad‑CAM, and view runs
+- Model: pretrained `ResNet18`; backbone frozen, final FC fine‑tuned
+- Trainer: supervised loop with progress and CSV metrics export
+- Devices: Streamlit training auto‑selects `mps`/`cuda`/`cpu`; CLI currently uses CPU
+- Config: single Hydra file `configs/train.yaml` drives CLI runs
+- Streamlit: pages for training, trying a model, and explainability (Grad‑CAM)
+- Notebooks: exploratory data analysis (`notebooks/exploratory_data_analysis.ipynb`)
 
-## Setup
+## Quickstart
 - Python: 3.10+ recommended
-- Create a virtual environment and install dependencies:
-  - macOS/Windows/Linux (CPU example):
-    - `python -m venv .venv && source .venv/bin/activate` (Windows: `\.venv\Scripts\activate`)
-    - `pip install --upgrade pip`
-  - `pip install torch torchvision pandas pillow pyyaml rich`
-  - For GPU/MPS, install the appropriate `torch/torchvision` wheels per the official PyTorch instructions.
+- Create and activate a virtual environment, then install core libs:
+  - `python -m venv .venv && source .venv/bin/activate` (Windows: `\.venv\Scripts\activate`)
+  - `pip install --upgrade pip`
+  - `pip install -e .`  # installs from `pyproject.toml`
+- For the Streamlit app (UI):
+  - `pip install -r streamlit_app/requirements.txt`
 
 ## Data
-- Expected layout (single root with class folders):
-  - `<root>/<CLASS>/*.(jpeg|jpg|png)` for each class (e.g., `COVID`, `NORMAL`, `PNEUMONIA`)
-- The loader deterministically splits each class 80/10/10 into train/val/test. If you already have `<root>/{train,val,test}/<CLASS>/...`, that layout is supported too.
-- Configure the dataset root in `configs/train.yaml` or via the Streamlit “Train Model” page.
+- Expected layout (single root with class folders, PNG only):
+  - `dataset/NORMAL/*.png`
+  - `dataset/PNEUMONIA/*.png`
+  - `dataset/COVID/*.png`
+- Splitting: deterministic 80/10/10 per class by contiguous slicing. Class label mapping: `NORMAL=0`, `PNEUMONIA=1`, `COVID=2`.
+- Debug mode: when `DEBUG=1` (see `.env`), the training split is subsampled to ~10% to speed up iterations.
 
 ## Configuration (Hydra)
-- Single file: `configs/train.yaml` containing `model`, `data`, `training`, `optimizer`, `criterion`, and `dataloader` sections.
-- Key options:
-  - Model: `name`=`ResNet18`, `num_classes`
-  - Data: `root`, `input_size`, `split_seed`
-  - Training: `batch_size`, `num_epochs`, `use_weighted_sampler`, `use_amp`, `seed`, `metric_to_monitor`, `mode`
-  - Optimizer: `Adam` with `lr`
-  - Dataloader: `num_workers`, `pin_memory`, `persistent_workers`
+- Single file: `configs/train.yaml` with sections: `model`, `data`, `training`, `optimizer`, `criterion`, and Hydra’s `run.dir` pattern for outputs.
+- Key options used by the code:
+  - Model: `model.name`=`ResNet18`, `model.num_classes`
+  - Data: `data.root` (dataset path)
+  - Training: `training.batch_size` (Streamlit), `training.num_epochs`, `training.seed`, `training.metric_to_monitor`, `training.mode`
+  - Optimizer: `optimizer.lr`, `optimizer.wd`
+  - Criterion: `criterion.name` (e.g., `CrossEntropyLoss`)
 
 ## Train (CLI)
 - Run: `python scripts/train.py`
 - Behavior:
-  - Uses Hydra; outputs saved to `outputs/YYYY-MM-DD/HH-MM-SS_<experiment_name>/`.
+  - Uses Hydra to load `configs/train.yaml` and construct the model and training loop.
   - Artifacts: `config.yaml`, `model.pth`, `best_model.pth`, `metrics.csv`.
-  - Weighted sampler and weighted cross‑entropy are configurable.
-
-## Notebooks
-- `notebooks/exploratory_data_analysis.ipynb`: quick EDA of the dataset
-- `notebooks/training_report.ipynb`: visualize metrics after training
+  - Output directory: by default under `outputs/YYYY-MM-DD/HH-MM-SS_<experiment_name>/` (Hydra). When `DEBUG=1`, artifacts are written to `./temp_DEBUG/` and epochs are capped for faster iteration.
+  - Note: current CLI path runs on CPU; Streamlit training selects the best available device.
 
 ## Streamlit App
-- Run the demo UI locally:
-  - `pip install -r streamlit_app/requirements.txt` (or rely on your env)
-  - `streamlit run streamlit_app/app.py`
+- Launch: `streamlit run streamlit_app/app.py`
 - Pages:
-  - Train Model: start a training run with UI‑controlled parameters (overrides Hydra defaults). Shows live epoch progress, loss/accuracy charts, and saves artifacts to the same `outputs/...` structure.
-  - Try Model: upload an image → predictions using a selected run’s `model.pth` and `config.yaml`.
-  - Explainability: Grad‑CAM heatmap for ResNet18 models.
-  - Training Runs: browse `outputs/` or `trained_models/` metrics and configs; view charts.
-- Notes:
-  - The Streamlit page saves YAML configs with Enums coerced to plain strings for compatibility.
-  - `persistent_workers` is enabled only if `num_workers > 0`.
+  - Train Model (`streamlit_app/pages/0_Train_Model.py`): configure dataset path, batch size, epochs, LR; runs training with live charts and saves artifacts under `outputs/`.
+  - Try Model (`streamlit_app/pages/1_Try_Model.py`): upload an image and view class probabilities from a selected run.
+  - Explainability (`streamlit_app/pages/2_Explainability.py`): Grad‑CAM heatmaps for ResNet18 runs.
+- Runs discovery: the app looks for runs under `outputs/` and `trained_models/` that contain `metrics.csv`.
 
-## Roadmap
-- Add early stopping and learning‑rate schedulers.
-- Resume training from a checkpoint in the UI.
-- Extend explainability beyond ResNet18.
+## Repository Structure
+- `scripts/train.py`: CLI entry that delegates to `src/trainer/launch.py` (Hydra)
+- `configs/train.yaml`: single Hydra config for CLI training
+- `src/models/resnet.py`: `CustomResNet18` (pretrained, frozen backbone, replaced FC)
+- `src/trainer/trainer.py`: minimal training/validation loop + metric/export helpers
+- `src/trainer/launch.py`: Hydra launcher, wiring data/model/optimizer/criterion
+- `src/dataio`: dataset split utilities and transforms
+- `streamlit_app/`: Streamlit UI, pages, and shared app utilities
 
 ## Notes
-- Dataset loader accepts `.jpeg`, `.jpg`, and `.png`.
+- File formats: current dataset utility loads `*.png` files only.
+- Transform parity: both training and inference use the same ResNet18 default transforms.
+- Devices: `src/utils/device.py` selects `mps` → `cuda` → `cpu` for Streamlit training.
+
+## Roadmap
+- Early stopping and learning‑rate schedulers
+- Resume training from a checkpoint in the UI
+- Extend explainability beyond ResNet18
