@@ -48,7 +48,7 @@ def main():
     input_size = int(cfg.get("data", {}).get("input_size") or cfg.get("input_size", 256))
     probs = predict_probs(model, img, input_size)
 
-    classes = ["NORMAL", "PNEUMONIA"]
+    classes = list(cfg.get("class_names") or ["COVID", "NORMAL", "PNEUMONIA"])
     st.subheader("Predictions")
     for c, p in zip(classes, probs):
         st.write(f"{c}: {p:.3f}")

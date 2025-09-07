@@ -11,10 +11,10 @@
 - Push
 - Push to Github once everything is completed
 
-Explainable AI training project for chest X‑ray pneumonia classification. Includes simple CNN/MLP baselines and a ResNet18 option, a training loop with progress, class imbalance handling, Hydra configs, and a Streamlit app for training, inference, explainability, and run browsing.
+Explainable AI training project for chest X‑ray pneumonia classification. Uses a ResNet18 model, a training loop with progress, class imbalance handling, a single-file Hydra config, and a Streamlit app for training, inference, explainability, and run browsing.
 
 ## Overview
-- Models: `SimpleCNN`, `SimpleMLP`, `ResNet18` (1‑channel input)
+- Model: `ResNet18`
 - Trainer: supervised training with accuracy/loss tracking and CSV export
 - Imbalance: weighted sampler and weighted cross‑entropy (configurable)
 - Hardware: auto‑selects `mps` (Apple), `cuda`, or `cpu`
@@ -31,26 +31,16 @@ Explainable AI training project for chest X‑ray pneumonia classification. Incl
   - For GPU/MPS, install the appropriate `torch/torchvision` wheels per the official PyTorch instructions.
 
 ## Data
-- Expected layout (relative to a chosen dataset root):
-  - `<root>/train/NORMAL/*.(jpeg|jpg|png)`
-  - `<root>/train/PNEUMONIA/*.(jpeg|jpg|png)`
-  - `<root>/val/NORMAL/*.(jpeg|jpg|png)`
-  - `<root>/val/PNEUMONIA/*.(jpeg|jpg|png)`
-- Images are loaded as grayscale and normalized.
-- Configure the dataset root either in Hydra config (`configs/data/chest_xray.yaml`) or via the Streamlit “Train Model” page.
-- The dataset loader resolves relative paths from the repository root and validates the folder structure.
+- Expected layout (single root with class folders):
+  - `<root>/<CLASS>/*.(jpeg|jpg|png)` for each class (e.g., `COVID`, `NORMAL`, `PNEUMONIA`)
+- The loader deterministically splits each class 80/10/10 into train/val/test. If you already have `<root>/{train,val,test}/<CLASS>/...`, that layout is supported too.
+- Configure the dataset root in `configs/train.yaml` or via the Streamlit “Train Model” page.
 
 ## Configuration (Hydra)
-- Main entry: `configs/train.yaml` with defaults for model/data/training/optimizer/criterion/dataloader.
-- Examples:
-  - `configs/model/{cnn,mlp,resnet18}.yaml`
-  - `configs/data/chest_xray.yaml`
-  - `configs/training/base.yaml`
-  - `configs/optimizer/adam.yaml`
-  - `configs/criterion/{ce,weighted_ce}.yaml`
+- Single file: `configs/train.yaml` containing `model`, `data`, `training`, `optimizer`, `criterion`, and `dataloader` sections.
 - Key options:
-  - Model: `CNN` | `MLP` | `ResNet18` (+ `hidden_size` for MLP)
-  - Data: `input_size`, `root`
+  - Model: `name`=`ResNet18`, `num_classes`
+  - Data: `root`, `input_size`, `split_seed`
   - Training: `batch_size`, `num_epochs`, `use_weighted_sampler`, `use_amp`, `seed`, `metric_to_monitor`, `mode`
   - Optimizer: `Adam` with `lr`
   - Dataloader: `num_workers`, `pin_memory`, `persistent_workers`
@@ -86,4 +76,3 @@ Explainable AI training project for chest X‑ray pneumonia classification. Incl
 
 ## Notes
 - Dataset loader accepts `.jpeg`, `.jpg`, and `.png`.
-- `SimpleCNN` and `SimpleMLP` are minimal baselines for iteration.

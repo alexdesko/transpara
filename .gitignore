@@ -7,3 +7,11 @@ transpara.egg-info/
 .ipynb_checkpoints/
 trained_models/
 outputs/
+
+
+dataset/
+
+.env
+
+
+temp_DEBUG/

@@ -12,10 +12,6 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
 
-from dataio.transform import custom_transform
-from models import CustomResNet18, SimpleCNN, SimpleMLP
-from utils.device import get_device
-
 # Ensure the project src/ is importable for `dataio`, `models`, `utils`
 APP_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = APP_ROOT.parent
@@ -24,6 +20,12 @@ for p in (REPO_ROOT, SRC_DIR):
     sp = str(p)
     if sp not in sys.path:
         sys.path.insert(0, sp)
+
+
+from dataio import custom_transform
+from models import CustomResNet18
+
+
 
 
 RUN_BASES = [Path("outputs"), Path("trained_models")]
@@ -65,16 +67,10 @@ def load_config(run_dir: Path) -> DictConfig:
 
 
 def build_model(model_name: str, input_size: int, num_classes: int):
-    """Construct a model by name consistent with training code."""
-    if model_name == "ResNet18":
-        model = CustomResNet18()
-    elif model_name == "CNN":
-        model = SimpleCNN(input_size=input_size, num_classes=num_classes)
-    elif model_name == "MLP":
-        model = SimpleMLP(input_size=input_size * input_size, num_classes=num_classes)
-    else:
-        raise ValueError(f"Unknown model: {model_name}")
-    return model
+    """Construct a model (ResNet18 only)."""
+    if model_name != "ResNet18":
+        raise ValueError("Only ResNet18 is supported in this app.")
+    return CustomResNet18(num_classes=num_classes)
 
 
 def load_model_from_run(run_dir: Path):
@@ -89,14 +85,14 @@ def load_model_from_run(run_dir: Path):
     model = build_model(model_name, input_size, num_classes)
     state = torch.load(run_dir / "model.pth", map_location="cpu")
     model.load_state_dict(state)
-    model.eval().to(get_device())
+    model.eval()
     return model, cfg
 
 
 def preprocess_image(img: Image.Image, input_size: int) -> torch.Tensor:
     """To tensor, resize, normalize; returns (1,C,H,W) on device."""
     # Use RGB to be compatible with ResNet18 default transforms (3-channel)
-    x = custom_transform(input_size)(img.convert("RGB")).unsqueeze(0).to(get_device())
+    x = custom_transform()(img.convert("RGB")).unsqueeze(0)
     return x
 
 
@@ -134,6 +130,9 @@ def gradcam(model: torch.nn.Module, img: Image.Image, input_size: int) -> tuple[
 
     h1 = target.register_forward_hook(fwd_hook)
     h2 = target.register_full_backward_hook(bwd_hook)
+
+    for p in model.parameters():
+        p.requires_grad = True
 
     x = preprocess_image(img, input_size)
     model.zero_grad(set_to_none=True)
