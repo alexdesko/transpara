@@ -1,14 +1,10 @@
 # TRANSPARA
 
 ## TODO
-- On the resnet keep 3 channels and rewrite the FC
 - Remove the train script
 - Check dependencies
-- Implement gradCAM for the other models
-- Check why the model is unbalanced
-- ensure testing images recieve the same transformation as the train and val
+- Implement gradCAM with the proper library
 - rewrite the docstrings
-- Push
 - Push to Github once everything is completed
 
 Explainable AI project for chest X‑ray pneumonia classification with a ResNet18 backbone, a lightweight Trainer, Hydra configuration for CLI runs, and a Streamlit app for training, inference, and Grad‑CAM explainability.

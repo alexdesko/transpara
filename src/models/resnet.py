@@ -36,3 +36,12 @@ class CustomResNet18(nn.Module):
 
     def forward(self, x):
         return self.model(x)
+    
+    def freeze_layers(self):
+        for p in self.model.paramters():
+            p.requires_grad = False
+        self.model.fc.requires_grad = True
+    
+    def unfreeze_layers(self):
+        for p in self.model.parameters():
+            p.requires_grad = True

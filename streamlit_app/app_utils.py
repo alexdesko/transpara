@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
+from pytorch_grad_cam import GradCAM
 
 # Ensure the project src/ is importable for `dataio`, `models`, `utils`
 APP_ROOT = Path(__file__).resolve().parent
@@ -111,6 +112,7 @@ def gradcam(model: torch.nn.Module, img: Image.Image, input_size: int) -> tuple[
     Returns (cam, pred_class) where cam is in [0,1] with shape (H,W) in the
     last conv's spatial resolution, which should be resized by the caller.
     """
+    print('went there already')
     # Access base for torchvision resnet
     base = model.model if hasattr(model, "model") else model
     # Try a reasonable default target conv for ResNet18
@@ -119,34 +121,19 @@ def gradcam(model: torch.nn.Module, img: Image.Image, input_size: int) -> tuple[
     except Exception as e:
         raise RuntimeError("Grad-CAM currently supports ResNet18 models only in this demo.") from e
 
-    activations: list[torch.Tensor] = []
-    gradients: list[torch.Tensor] = []
+    model.unfreeze_layers()
+    print('before pre-process')
+    input_tensor = preprocess_image(img, input_size)
+    print('after pre-process')
 
-    def fwd_hook(_, __, out):
-        activations.append(out.detach())
+    # Construct the CAM object once, and then re-use it on many images.
+    with GradCAM(model=model, target_layers=target) as cam:
+        # You can also pass aug_smooth=True and eigen_smooth=True, to apply smoothing.
+        grayscale_cam = cam(input_tensor=input_tensor, targets=target)
+        # In this example grayscale_cam has only one image in the batch:
+        grayscale_cam = grayscale_cam[0, :]
+        visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+        # You can also get the model outputs without having to redo inference
+        model_outputs = cam.outputs
 
-    def bwd_hook(_, grad_in, grad_out):
-        gradients.append(grad_out[0].detach())
-
-    h1 = target.register_forward_hook(fwd_hook)
-    h2 = target.register_full_backward_hook(bwd_hook)
-
-    for p in model.parameters():
-        p.requires_grad = True
-
-    x = preprocess_image(img, input_size)
-    model.zero_grad(set_to_none=True)
-    logits = model(x)
-    cls = int(logits.argmax(1).item())
-    logits[:, cls].backward()
-
-    acts = activations[-1][0]  # (C,H,W)
-    grads = gradients[-1][0]  # (C,H,W)
-    weights = grads.mean(dim=(1, 2))  # (C,)
-    cam = (weights[:, None, None] * acts).sum(0)
-    cam = torch.relu(cam)
-    cam = cam / (cam.max() + 1e-6)
-
-    h1.remove()
-    h2.remove()
     return cam.cpu().numpy(), cls
